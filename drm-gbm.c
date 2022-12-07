@@ -79,18 +79,39 @@ static void setup_opengl () {
 	// create an OpenGL context
 	eglBindAPI (EGL_OPENGL_API);
 	EGLint attributes[] = {
+        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
 		EGL_RED_SIZE, 8,
 		EGL_GREEN_SIZE, 8,
 		EGL_BLUE_SIZE, 8,
+        //EGL_DEPTH_SIZE, 24,
+        EGL_ALPHA_SIZE, 8,
+        EGL_BUFFER_SIZE,32, 
 	EGL_NONE};
 	EGLConfig config;
 	EGLint num_config;
-	eglChooseConfig (display, attributes, &config, 1, &num_config);
+	EGLint ret = eglChooseConfig (display, attributes, &config, 1, &num_config);
+    printf("eglChoseConfig ===>%d\n",ret);
 	context = eglCreateContext (display, config, EGL_NO_CONTEXT, NULL);
-	
+
 	// create the GBM and EGL surface
 	gbm_surface = gbm_surface_create (gbm_device, mode_info.hdisplay, mode_info.vdisplay, GBM_BO_FORMAT_XRGB8888, GBM_BO_USE_SCANOUT|GBM_BO_USE_RENDERING);
 	egl_surface = eglCreateWindowSurface (display, config, gbm_surface, NULL);
+    #if 0
+    EGLint count;
+    eglGetConfigs(display,NULL, 0, &count);
+    EGLConfig *configs = malloc(count *sizeof(*configs));
+    ret = eglGetConfigs(display,configs, count, &count);
+    printf("eglGetConfigs ===>%d\n",ret);
+    int i  =0;
+    for(; i < count; ++i) {
+	egl_surface = eglCreateWindowSurface (display, configs[i], gbm_surface, NULL);
+        if (egl_surface ) {
+            EGLint format;
+            ret = eglGetConfigAttrib(display, configs[i], EGL_NATIVE_VISUAL_ID, &format);
+            printf("i====%d, format=%x ,%x\n", i, format, GBM_BO_FORMAT_XRGB8888);
+        }
+    }
+   #endif
 	eglMakeCurrent (display, egl_surface, egl_surface, context);
 }
 
@@ -115,8 +136,16 @@ static void swap_buffers () {
 }
 
 static void draw (float progress) {
-	glClearColor (1.0f-progress, progress, 0.0, 1.0);
+	glClearColor (0, progress, 0.0, 1.0);
 	glClear (GL_COLOR_BUFFER_BIT);
+    glBegin(GL_TRIANGLES);
+    glColor3f(1.0, 0.0, 0.0);
+    glVertex3f(-0.5, 0.0, 0.0);
+    glColor3f(0.0, 1.0, 0.0);
+    glVertex3f(0.0, -0.5, 0.0);
+    glColor3f(0.0, 0.0, 1.0);
+    glVertex3f(0.0, 0, 0.0);
+    glEnd();
 	swap_buffers ();
 }
 
@@ -143,8 +172,8 @@ int main () {
 	setup_opengl ();
 	
 	int i;
-	for (i = 0; i < 600; i++)
-		draw (i / 600.0f);
+	for (i = 0; i < 400; i++)
+		draw (i / 400.0f);
 	
 	clean_up ();
 	close (device);
